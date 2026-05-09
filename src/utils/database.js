@@ -96,8 +96,9 @@ function saveDatabase() {
   }
 }
 
-// Auto-save every 30 seconds
-setInterval(saveDatabase, 30000);
+// Auto-save every 30 seconds.
+// unref() prevents this timer from keeping the process alive in scripts/tests.
+setInterval(saveDatabase, 30000).unref();
 
 // Helper methods to match better-sqlite3 API style
 const dbHelper = {
@@ -151,11 +152,15 @@ const dbHelper = {
         });
         try {
           db.run(sql, cleanParams);
-          saveDatabase();
+          // IMPORTANT: read last_insert_rowid and getRowsModified BEFORE
+          // calling saveDatabase() — db.export() inside saveDatabase resets
+          // both values to 0.
           const lastId = db.exec("SELECT last_insert_rowid()");
+          const rowsModified = db.getRowsModified();
+          saveDatabase();
           return {
             lastInsertRowid: lastId.length ? lastId[0].values[0][0] : 0,
-            changes: db.getRowsModified()
+            changes: rowsModified
           };
         } catch (e) {
           console.error('DB run error:', e.message, sql, cleanParams);
