@@ -7,6 +7,13 @@ const path = require('path');
 const { initDatabase, dbHelper } = require('./utils/database');
 
 async function start() {
+  const fs = require('fs');
+  // Ensure data/sessions directory exists
+  const sessionsDir = path.join(__dirname, '..', 'data', 'sessions');
+  if (!fs.existsSync(sessionsDir)) {
+    fs.mkdirSync(sessionsDir, { recursive: true });
+  }
+
   // Initialize database first
   await initDatabase();
 
