@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+
+<div class="admin-panel">
+  <h1>🛡️ Admin Panel</h1>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-value"><%= stats.totalUsers %></span>
+      <span class="stat-label">Users</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value"><%= stats.totalApps %></span>
+      <span class="stat-label">Total Apps</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value"><%= stats.runningApps %></span>
+      <span class="stat-label">Running</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value"><%= stats.stoppedApps %></span>
+      <span class="stat-label">Stopped</span>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="section-card">
+    <h3>👥 Users</h3>
+    <table class="admin-table">
+      <thead>
+        <tr><th>Username</th><th>Email</th><th>Role</th><th>Apps</th><th>RAM Limit</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td><strong><%= u.username %></strong></td>
+          <td><%= u.email %></td>
+          <td><span class="role-badge role-<%= u.role %>"><%= u.role %></span></td>
+          <td><%= u.max_apps %></td>
+          <td><%= u.max_ram_mb %>MB</td>
+          <td>
+            <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-secondary">Manage</a>
+            <% if (u.role !== 'admin') { %>
+            <button class="btn btn-sm btn-danger" onclick="deleteUser(<%= u.id %>)">Delete</button>
+            <% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- All Apps -->
+  <div class="section-card">
+    <h3>📦 All Apps</h3>
+    <table class="admin-table">
+      <thead>
+        <tr><th>Name</th><th>Owner</th><th>Status</th><th>Port</th><th>RAM</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% apps.forEach(app => { %>
+        <tr>
+          <td><strong><%= app.name %></strong></td>
+          <td><%= app.username %></td>
+          <td><span class="status-badge status-<%= app.status %>"><%= app.status %></span></td>
+          <td><%= app.port %></td>
+          <td><%= app.ram_limit_mb %>MB</td>
+          <td>
+            <% if (app.status === 'running') { %>
+            <button class="btn btn-sm btn-danger" onclick="adminForceStop(<%= app.id %>)">Force Stop</button>
+            <% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

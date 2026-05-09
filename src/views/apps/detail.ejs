@@ -1,0 +1,88 @@
+<%- include('../partials/header') %>
+
+<div class="app-detail">
+  <div class="app-detail-header">
+    <div>
+      <h1><%= app.name %></h1>
+      <span class="status-badge status-<%= app.status %>"><%= app.status %></span>
+    </div>
+    <div class="app-actions">
+      <% if (app.status !== 'running') { %>
+      <button class="btn btn-success" onclick="appAction(<%= app.id %>, 'deploy')">🚀 Deploy</button>
+      <% } %>
+      <% if (app.status === 'running') { %>
+      <button class="btn btn-warning" onclick="appAction(<%= app.id %>, 'restart')">🔄 Restart</button>
+      <button class="btn btn-danger" onclick="appAction(<%= app.id %>, 'stop')">⏹ Stop</button>
+      <% } %>
+      <button class="btn btn-danger-outline" onclick="deleteApp(<%= app.id %>)">🗑 Delete</button>
+    </div>
+  </div>
+
+  <!-- App Info -->
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>📋 Details</h3>
+      <table class="info-table">
+        <tr><td>Port</td><td><strong><%= app.port %></strong></td></tr>
+        <tr><td>Entry File</td><td><code><%= app.entry_file %></code></td></tr>
+        <tr><td>Branch</td><td><code><%= app.branch %></code></td></tr>
+        <tr><td>RAM Limit</td><td><%= app.ram_limit_mb %>MB</td></tr>
+        <tr><td>Auto Restart</td><td><%= app.auto_restart ? 'Yes' : 'No' %></td></tr>
+        <tr><td>Repo</td><td class="text-truncate"><a href="<%= app.repo_url %>" target="_blank"><%= app.repo_url %></a></td></tr>
+        <% if (app.domain) { %>
+        <tr><td>Domain</td><td><a href="http://<%= app.domain %>" target="_blank"><%= app.domain %></a></td></tr>
+        <% } %>
+      </table>
+    </div>
+
+    <% if (info) { %>
+    <div class="info-card">
+      <h3>📊 Runtime</h3>
+      <table class="info-table">
+        <tr><td>Status</td><td><span class="status-badge status-<%= info.status %>"><%= info.status %></span></td></tr>
+        <tr><td>Memory</td><td><%= info.memory %>MB / <%= app.ram_limit_mb %>MB</td></tr>
+        <tr><td>CPU</td><td><%= info.cpu %>%</td></tr>
+        <tr><td>Restarts</td><td><%= info.restarts %></td></tr>
+        <tr><td>Uptime</td><td><%= Math.round(info.uptime / 1000 / 60) %> min</td></tr>
+      </table>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Environment Variables -->
+  <div class="section-card">
+    <h3>⚙️ Environment Variables</h3>
+    <p class="text-muted">JSON format. PORT is auto-injected.</p>
+    <textarea id="env-vars" class="code-editor" rows="6"><%= app.env_vars || '{}' %></textarea>
+    <button class="btn btn-secondary" onclick="saveEnvVars(<%= app.id %>)">Save Variables</button>
+  </div>
+
+  <!-- Logs -->
+  <div class="section-card">
+    <h3>📜 Application Logs</h3>
+    <button class="btn btn-sm btn-secondary" onclick="refreshLogs(<%= app.id %>)">Refresh Logs</button>
+    <pre class="log-output" id="app-logs">Click "Refresh Logs" to load...</pre>
+  </div>
+
+  <!-- Deploy History -->
+  <div class="section-card">
+    <h3>📝 Deploy History</h3>
+    <table class="deploy-table">
+      <thead>
+        <tr><th>Action</th><th>Status</th><th>Output</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        <% logs.forEach(log => { %>
+        <tr>
+          <td><%= log.action %></td>
+          <td><span class="status-badge status-<%= log.status %>"><%= log.status %></span></td>
+          <td class="text-truncate"><%= log.output %></td>
+          <td><%= log.created_at %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

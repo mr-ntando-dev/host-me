@@ -1,0 +1,43 @@
+<%- include('../partials/header') %>
+
+<div class="form-container">
+  <h1>Deploy New App</h1>
+  <% if (error) { %>
+  <div class="alert alert-error"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="/apps/create" class="deploy-form">
+    <div class="form-group">
+      <label>App Name</label>
+      <input type="text" name="name" required placeholder="my-awesome-app" pattern="[a-z0-9-]+" minlength="2" maxlength="30">
+      <small>Lowercase letters, numbers, and hyphens only</small>
+    </div>
+
+    <div class="form-group">
+      <label>Git Repository URL</label>
+      <input type="url" name="repo_url" required placeholder="https://github.com/user/repo.git">
+      <small>HTTPS URL. For private repos, make sure your Git token is set in dashboard settings.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Branch</label>
+      <input type="text" name="branch" value="main" placeholder="main">
+    </div>
+
+    <div class="form-group">
+      <label>Entry File</label>
+      <input type="text" name="entry_file" value="index.js" placeholder="index.js">
+      <small>Main file to run (e.g. index.js, server.js, app.js)</small>
+    </div>
+
+    <div class="form-group">
+      <label>RAM Limit (MB)</label>
+      <input type="number" name="ram_limit" value="256" min="64" max="1024">
+      <small>Maximum memory your app can use before auto-restart</small>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-full">Create App</button>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>
