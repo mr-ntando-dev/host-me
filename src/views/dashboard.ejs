@@ -26,9 +26,32 @@
     <h3>🔑 Git Token</h3>
     <p class="text-muted">Set your GitHub/GitLab personal access token for private repo access.</p>
     <div class="inline-form">
-      <input type="password" id="git-token-input" placeholder="ghp_xxxx or glpat-xxxx" 
+      <input type="password" id="git-token-input" placeholder="ghp_xxxx or glpat-xxxx"
              value="<%= user.git_token ? '••••••••' : '' %>">
       <button class="btn btn-secondary" onclick="saveGitToken()">Save Token</button>
+    </div>
+  </div>
+
+  <!-- AI Quick Deploy -->
+  <div class="settings-card ai-section">
+    <div class="ai-section-header">
+      <h3>🤖 AI Quick Deploy</h3>
+      <span class="ai-badge">AI</span>
+    </div>
+    <p class="text-muted">Paste a GitHub repo URL — AI will auto-detect the entry file, RAM needs, env vars, and app name.</p>
+    <div class="inline-form">
+      <input type="url" id="ai-repo-url" placeholder="https://github.com/user/my-node-app" style="flex:1">
+      <button class="btn btn-ai" onclick="aiQuickDeploy()" id="ai-detect-btn">
+        <span id="ai-detect-icon">✨</span> Auto-Detect Config
+      </button>
+    </div>
+    <div id="ai-detection-result" style="display:none" class="ai-result-card">
+      <div class="ai-result-header">
+        <strong>🤖 AI Detected Configuration</strong>
+        <button class="btn btn-sm btn-primary" onclick="applyAiConfig()" style="margin-left:auto">Use This Config &rarr;</button>
+      </div>
+      <div id="ai-config-preview"></div>
+      <p id="ai-notes" class="text-muted" style="margin-top:8px; font-size:0.85rem"></p>
     </div>
   </div>
 
@@ -65,5 +88,75 @@
   </div>
   <% } %>
 </div>
+
+<script>
+let detectedConfig = null;
+
+async function aiQuickDeploy() {
+  const repoUrl = document.getElementById('ai-repo-url').value.trim();
+  if (!repoUrl) { showToast('Enter a GitHub repo URL first', 'error'); return; }
+
+  const btn = document.getElementById('ai-detect-btn');
+  const icon = document.getElementById('ai-detect-icon');
+  btn.disabled = true;
+  icon.textContent = '...';
+
+  document.getElementById('ai-detection-result').style.display = 'none';
+
+  try {
+    const res = await fetch('/ai/detect-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo_url: repoUrl })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast(data.error || 'AI detection failed', 'error');
+      return;
+    }
+
+    detectedConfig = data.config;
+    detectedConfig.repo_url = repoUrl;
+
+    const preview = document.getElementById('ai-config-preview');
+    const envKeys = Object.keys(detectedConfig.env_vars || {});
+    preview.innerHTML = `
+      <div class="ai-config-grid">
+        <div class="ai-config-item"><span class="config-label">App Name</span><code>${escHtml(detectedConfig.name)}</code></div>
+        <div class="ai-config-item"><span class="config-label">Branch</span><code>${escHtml(detectedConfig.branch)}</code></div>
+        <div class="ai-config-item"><span class="config-label">Entry File</span><code>${escHtml(detectedConfig.entry_file)}</code></div>
+        <div class="ai-config-item"><span class="config-label">RAM</span><code>${detectedConfig.ram_limit}MB</code></div>
+        ${envKeys.length > 0 ? '<div class="ai-config-item"><span class="config-label">Env Vars</span><code>' + escHtml(envKeys.join(', ')) + '</code></div>' : ''}
+      </div>
+    `;
+    document.getElementById('ai-notes').textContent = detectedConfig.notes || '';
+    document.getElementById('ai-detection-result').style.display = 'block';
+    showToast('AI config detected!', 'success');
+  } catch (err) {
+    showToast('Network error', 'error');
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '✨';
+  }
+}
+
+function applyAiConfig() {
+  if (!detectedConfig) return;
+  const params = new URLSearchParams({
+    name: detectedConfig.name || '',
+    repo_url: detectedConfig.repo_url || '',
+    branch: detectedConfig.branch || 'main',
+    entry_file: detectedConfig.entry_file || 'index.js',
+    ram_limit: detectedConfig.ram_limit || 256,
+    env_vars: JSON.stringify(detectedConfig.env_vars || {})
+  });
+  window.location.href = '/apps/create?' + params.toString();
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
 
 <%- include('partials/footer') %>

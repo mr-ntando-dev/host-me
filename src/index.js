@@ -20,6 +20,7 @@ async function start() {
   const authRoutes = require('./routes/auth');
   const appRoutes = require('./routes/apps');
   const adminRoutes = require('./routes/admin');
+  const aiRoutes = require('./routes/ai');
   const { isAuthenticated } = require('./middleware/auth');
 
   const app = express();
@@ -67,6 +68,7 @@ async function start() {
   app.use('/auth', authRoutes);
   app.use('/apps', isAuthenticated, appRoutes);
   app.use('/admin', isAuthenticated, adminRoutes);
+  app.use('/ai', isAuthenticated, aiRoutes);
 
   app.get('/dashboard', isAuthenticated, (req, res) => {
     const db = dbHelper;

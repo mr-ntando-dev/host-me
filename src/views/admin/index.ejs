@@ -22,6 +22,29 @@
     </div>
   </div>
 
+  <!-- AI Admin Assistant -->
+  <div class="section-card ai-section" style="margin-bottom: 2rem">
+    <div class="ai-section-header">
+      <h3>🤖 AI Admin Assistant</h3>
+      <span class="ai-badge">AI</span>
+    </div>
+    <p class="text-muted" style="margin-bottom:1rem">Ask anything about your server, users, apps, or get management recommendations. AI has full visibility into your server state.</p>
+
+    <div class="ai-quick-actions">
+      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Which apps or users are using the most resources? Should I be concerned?')">📊 Resource audit</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Are there any apps in error or stopped state that need attention?')">🚨 App health check</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('What are good default resource limits for new users on this server?')">⚙️ Capacity planning</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Summarize recent activity and flag anything unusual')">🔎 Activity summary</button>
+    </div>
+
+    <div id="admin-ai-messages" class="ai-chat-messages"></div>
+
+    <div class="ai-chat-input-row">
+      <input type="text" id="admin-ai-input" placeholder="Ask about your server, users, or apps..." onkeydown="if(event.key==='Enter') sendAdminAiMessage()">
+      <button class="btn btn-ai" onclick="sendAdminAiMessage()" id="admin-ai-btn">Ask AI</button>
+    </div>
+  </div>
+
   <!-- Users Table -->
   <div class="section-card">
     <h3>👥 Users</h3>
@@ -75,5 +98,80 @@
     </table>
   </div>
 </div>
+
+<script>
+let adminChatHistory = [];
+
+function renderMarkdown(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, m => '<pre style="background:#0d0d1a;padding:10px;border-radius:6px;overflow-x:auto;font-size:0.82rem"><code>' + escHtml(m.slice(3, m.lastIndexOf('```')).replace(/^[^\n]*\n/, '')) + '</code></pre>')
+    .replace(/`([^`]+)`/g, '<code style="background:#0d0d1a;padding:2px 5px;border-radius:4px">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.+)$/gm, '<strong style="font-size:1rem">$1</strong>')
+    .replace(/^## (.+)$/gm, '<strong style="font-size:1.1rem">$1</strong>')
+    .replace(/^- (.+)$/gm, '&bull; $1<br>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addAdminMsg(role, content, isLoading) {
+  const container = document.getElementById('admin-ai-messages');
+  const div = document.createElement('div');
+  div.className = `ai-msg ai-msg-${role}`;
+  if (isLoading) {
+    div.id = 'admin-loading-msg';
+    div.innerHTML = '<span class="ai-typing">AI is thinking<span class="dots">...</span></span>';
+  } else {
+    div.innerHTML = role === 'assistant' ? renderMarkdown(content) : '<span>' + escHtml(content) + '</span>';
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+async function sendAdminAiMessage() {
+  const input = document.getElementById('admin-ai-input');
+  const btn = document.getElementById('admin-ai-btn');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  btn.disabled = true;
+  addAdminMsg('user', message);
+  const loadingEl = addAdminMsg('assistant', '', true);
+
+  try {
+    const res = await fetch('/ai/admin-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history: adminChatHistory })
+    });
+    const data = await res.json();
+    loadingEl.remove();
+
+    if (data.success) {
+      adminChatHistory.push({ role: 'user', content: message });
+      adminChatHistory.push({ role: 'assistant', content: data.reply });
+      if (adminChatHistory.length > 12) adminChatHistory = adminChatHistory.slice(-12);
+      addAdminMsg('assistant', data.reply);
+    } else {
+      addAdminMsg('assistant', 'Error: ' + (data.error || 'AI unavailable'));
+    }
+  } catch(e) {
+    loadingEl.remove();
+    addAdminMsg('assistant', 'Network error — try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function adminAiQuick(msg) {
+  document.getElementById('admin-ai-input').value = msg;
+  sendAdminAiMessage();
+}
+</script>
 
 <%- include('../partials/footer') %>

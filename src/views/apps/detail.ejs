@@ -49,9 +49,38 @@
     <% } %>
   </div>
 
+  <!-- AI Assistant Panel -->
+  <div class="section-card ai-section">
+    <div class="ai-section-header">
+      <h3>🤖 AI Assistant</h3>
+      <span class="ai-badge">AI</span>
+    </div>
+    <p class="text-muted" style="margin-bottom:1rem">Ask anything about this app — debug errors, optimize config, set up env vars, or explain how to use it.</p>
+
+    <!-- Quick Actions -->
+    <div class="ai-quick-actions">
+      <button class="btn btn-sm btn-ai-outline" onclick="aiQuickAction('Analyze the logs and tell me if there are any errors or problems')">🔍 Diagnose logs</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="aiQuickAction('What environment variables does this app need? List them with explanations')">⚙️ Suggest env vars</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="aiQuickAction('What RAM limit would you recommend for this app and why?')">💾 Optimize RAM</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="aiQuickAction('Why might this app be crashing or failing to start?')">🚨 Debug crashes</button>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="ai-chat-messages" class="ai-chat-messages"></div>
+
+    <!-- Chat Input -->
+    <div class="ai-chat-input-row">
+      <input type="text" id="ai-chat-input" placeholder="Ask the AI about this app..." onkeydown="if(event.key==='Enter') sendAiMessage()">
+      <button class="btn btn-ai" onclick="sendAiMessage()" id="ai-send-btn">Send</button>
+    </div>
+  </div>
+
   <!-- Environment Variables -->
   <div class="section-card">
-    <h3>⚙️ Environment Variables</h3>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:0.5rem">
+      <h3 style="margin:0">⚙️ Environment Variables</h3>
+      <button class="btn btn-sm btn-ai-outline" onclick="aiSuggestEnv(<%= app.id %>)" id="ai-env-btn">✨ AI Suggest</button>
+    </div>
     <p class="text-muted">Add variables your app needs (bot tokens, API keys, database URLs, etc). PORT is auto-injected.</p>
     <div id="env-editor">
       <div class="env-rows" id="env-rows"></div>
@@ -98,13 +127,53 @@
     }
 
     renderEnvRows();
+
+    // AI Suggest Env Vars
+    async function aiSuggestEnv(appId) {
+      const btn = document.getElementById('ai-env-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Thinking...';
+      try {
+        const res = await fetch('/ai/suggest-env', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_id: appId })
+        });
+        const data = await res.json();
+        if (data.success && data.suggestions) {
+          let added = 0;
+          Object.entries(data.suggestions).forEach(([key, val]) => {
+            if (!envData[key]) {
+              envData[key] = val;
+              added++;
+            }
+          });
+          renderEnvRows();
+          showToast(added > 0 ? `AI added ${added} suggested env var${added>1?'s':''}` : 'AI: all suggested vars already present', 'success');
+        } else {
+          showToast(data.error || 'AI suggestion failed', 'error');
+        }
+      } catch(e) {
+        showToast('Network error', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ AI Suggest';
+      }
+    }
   </script>
 
   <!-- Logs -->
   <div class="section-card">
-    <h3>📜 Application Logs</h3>
-    <button class="btn btn-sm btn-secondary" onclick="refreshLogs(<%= app.id %>)">Refresh Logs</button>
-    <pre class="log-output" id="app-logs">Click "Refresh Logs" to load...</pre>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:0.75rem">
+      <h3 style="margin:0">📜 Application Logs</h3>
+      <button class="btn btn-sm btn-secondary" onclick="refreshLogs(<%= app.id %>)">Refresh</button>
+      <button class="btn btn-sm btn-ai-outline" onclick="aiAnalyzeLogs(<%= app.id %>)" id="ai-analyze-btn">🤖 AI Analyze</button>
+    </div>
+    <div id="ai-log-analysis" style="display:none" class="ai-result-card" style="margin-bottom:1rem">
+      <strong>🤖 AI Log Analysis</strong>
+      <div id="ai-log-content" style="margin-top:8px"></div>
+    </div>
+    <pre class="log-output" id="app-logs">Click "Refresh" to load logs...</pre>
   </div>
 
   <!-- Deploy History -->
@@ -127,5 +196,128 @@
     </table>
   </div>
 </div>
+
+<!-- AI Chat JS -->
+<script>
+const APP_ID = <%= app.id %>;
+const APP_CONTEXT = `App: <%= app.name %>
+Repo: <%= app.repo_url %>
+Branch: <%= app.branch %>
+Entry: <%= app.entry_file %>
+Status: <%= app.status %>
+RAM: <%= app.ram_limit_mb %>MB
+Port: <%= app.port %>`;
+
+let chatHistory = [];
+
+function renderMarkdown(text) {
+  // Basic markdown: code blocks, inline code, bold, line breaks
+  return text
+    .replace(/```[\s\S]*?```/g, m => '<pre style="background:#0d0d1a;padding:10px;border-radius:6px;overflow-x:auto;font-size:0.82rem"><code>' + escHtml(m.slice(3, m.lastIndexOf('```')).replace(/^[^\n]*\n/, '')) + '</code></pre>')
+    .replace(/`([^`]+)`/g, '<code style="background:#0d0d1a;padding:2px 5px;border-radius:4px">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.+)$/gm, '<strong style="font-size:1rem">$1</strong>')
+    .replace(/^## (.+)$/gm, '<strong style="font-size:1.1rem">$1</strong>')
+    .replace(/^- (.+)$/gm, '&bull; $1<br>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addChatMessage(role, content, isLoading) {
+  const container = document.getElementById('ai-chat-messages');
+  const div = document.createElement('div');
+  div.className = `ai-msg ai-msg-${role}`;
+  if (isLoading) {
+    div.id = 'ai-loading-msg';
+    div.innerHTML = '<span class="ai-typing">AI is thinking<span class="dots">...</span></span>';
+  } else {
+    div.innerHTML = role === 'assistant'
+      ? renderMarkdown(content)
+      : '<span>' + escHtml(content) + '</span>';
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const btn = document.getElementById('ai-send-btn');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  btn.disabled = true;
+  addChatMessage('user', message);
+  const loadingMsg = addChatMessage('assistant', '', true);
+
+  try {
+    const res = await fetch('/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, context: APP_CONTEXT, history: chatHistory })
+    });
+    const data = await res.json();
+    loadingMsg.remove();
+
+    if (data.success) {
+      chatHistory.push({ role: 'user', content: message });
+      chatHistory.push({ role: 'assistant', content: data.reply });
+      if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+      addChatMessage('assistant', data.reply);
+    } else {
+      addChatMessage('assistant', 'Error: ' + (data.error || 'AI unavailable'));
+    }
+  } catch(e) {
+    loadingMsg.remove();
+    addChatMessage('assistant', 'Network error — try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function aiQuickAction(msg) {
+  document.getElementById('ai-chat-input').value = msg;
+  sendAiMessage();
+  // Scroll to chat
+  document.querySelector('.ai-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function aiAnalyzeLogs(appId) {
+  const btn = document.getElementById('ai-analyze-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyzing...';
+
+  // First refresh logs so we have latest
+  await refreshLogs(appId);
+
+  try {
+    const res = await fetch('/ai/analyze-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app_id: appId })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      const panel = document.getElementById('ai-log-analysis');
+      const content = document.getElementById('ai-log-content');
+      content.innerHTML = renderMarkdown(data.analysis);
+      panel.style.display = 'block';
+      panel.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      showToast(data.error || 'AI analysis failed', 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AI Analyze';
+  }
+}
+</script>
 
 <%- include('../partials/footer') %>
