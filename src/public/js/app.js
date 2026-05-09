@@ -67,14 +67,19 @@ async function saveGitToken() {
 
 // Save environment variables
 async function saveEnvVars(appId) {
-  const envVars = document.getElementById('env-vars').value;
+  // Collect key-value pairs from the editor rows
+  const rows = document.querySelectorAll('.env-row');
+  const envObj = {};
 
-  try {
-    JSON.parse(envVars);
-  } catch (e) {
-    showToast('Invalid JSON format', 'error');
-    return;
-  }
+  rows.forEach(row => {
+    const key = row.querySelector('.env-key').value.trim();
+    const value = row.querySelector('.env-value').value;
+    if (key) {
+      envObj[key] = value;
+    }
+  });
+
+  const envVars = JSON.stringify(envObj);
 
   try {
     const res = await fetch(`/apps/${appId}/env`, {

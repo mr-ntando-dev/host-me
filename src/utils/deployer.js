@@ -68,6 +68,12 @@ class Deployer {
     // Add PORT to env
     envVars.PORT = String(app.port);
 
+    // Write .env file so apps using dotenv can read it
+    const envFileContent = Object.entries(envVars)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    fs.writeFileSync(path.join(appDir, '.env'), envFileContent);
+
     // Build PM2 ecosystem config
     const ecosystem = {
       name: pm2Name,

@@ -52,10 +52,53 @@
   <!-- Environment Variables -->
   <div class="section-card">
     <h3>⚙️ Environment Variables</h3>
-    <p class="text-muted">JSON format. PORT is auto-injected.</p>
-    <textarea id="env-vars" class="code-editor" rows="6"><%= app.env_vars || '{}' %></textarea>
-    <button class="btn btn-secondary" onclick="saveEnvVars(<%= app.id %>)">Save Variables</button>
+    <p class="text-muted">Add variables your app needs (bot tokens, API keys, database URLs, etc). PORT is auto-injected.</p>
+    <div id="env-editor">
+      <div class="env-rows" id="env-rows"></div>
+      <button class="btn btn-sm btn-secondary" onclick="addEnvRow()">+ Add Variable</button>
+    </div>
+    <br>
+    <button class="btn btn-primary" onclick="saveEnvVars(<%= app.id %>)">Save Variables</button>
+    <span class="text-muted" style="margin-left:10px; font-size:0.85rem;">Redeploy after saving to apply changes.</span>
   </div>
+
+  <script>
+    // Load existing env vars
+    const existingEnv = <%- JSON.stringify(app.env_vars || '{}') %>;
+    let envData = {};
+    try { envData = JSON.parse(existingEnv); } catch(e) { envData = {}; }
+
+    function renderEnvRows() {
+      const container = document.getElementById('env-rows');
+      container.innerHTML = '';
+      Object.entries(envData).forEach(([key, value]) => {
+        addEnvRowWithData(key, value);
+      });
+      if (Object.keys(envData).length === 0) addEnvRow();
+    }
+
+    function addEnvRowWithData(key, value) {
+      const container = document.getElementById('env-rows');
+      const row = document.createElement('div');
+      row.className = 'env-row';
+      row.innerHTML = `
+        <input type="text" class="env-key" placeholder="KEY" value="${escapeHtml(key)}">
+        <input type="text" class="env-value" placeholder="value" value="${escapeHtml(value)}">
+        <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function addEnvRow() {
+      addEnvRowWithData('', '');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    renderEnvRows();
+  </script>
 
   <!-- Logs -->
   <div class="section-card">
