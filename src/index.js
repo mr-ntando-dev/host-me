@@ -84,8 +84,37 @@ async function start() {
   });
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`⚡ Speceify panel running on port ${PORT}`);
-    console.log(`🌐 http://localhost:${PORT}`);
+    // Resolve the machine's local network IP for the QR code
+    const os = require('os');
+    const qrcode = require('qrcode-terminal');
+    let localIp = 'localhost';
+    const nets = os.networkInterfaces();
+    for (const iface of Object.values(nets)) {
+      for (const net of iface) {
+        if (net.family === 'IPv4' && !net.internal) {
+          localIp = net.address;
+          break;
+        }
+      }
+      if (localIp !== 'localhost') break;
+    }
+
+    const panelUrl = `http://${localIp}:${PORT}`;
+
+    console.log('');
+    console.log('╔══════════════════════════════════════════════╗');
+    console.log('  ⚡  S P E C E I F Y   P A N E L   ⚡');
+    console.log('╚══════════════════════════════════════════════╝');
+    console.log('');
+    console.log(`  🌐  Local  : http://localhost:${PORT}`);
+    console.log(`  📡  Network: ${panelUrl}`);
+    console.log('');
+    console.log('  📱 Scan to open on your phone:');
+    console.log('');
+    qrcode.generate(panelUrl, { small: true });
+    console.log(`  Default login: admin / admin123`);
+    console.log('  ⚠️  Change your admin password after first login!');
+    console.log('');
   });
 }
 
