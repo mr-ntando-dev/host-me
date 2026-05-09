@@ -104,31 +104,64 @@ const dbHelper = {
   prepare(sql) {
     return {
       get(...params) {
-        const result = db.exec(sql, params);
-        if (!result.length || !result[0].values.length) return undefined;
-        const columns = result[0].columns;
-        const values = result[0].values[0];
-        const row = {};
-        columns.forEach((col, i) => { row[col] = values[i]; });
-        return row;
+        // sql.js uses $1, $2 style or ? placeholders
+        // Convert params to numbers where appropriate
+        const cleanParams = params.map(p => {
+          if (typeof p === 'string' && /^\d+$/.test(p)) return parseInt(p);
+          return p;
+        });
+        try {
+          const stmt = db.prepare(sql);
+          stmt.bind(cleanParams);
+          if (stmt.step()) {
+            const row = stmt.getAsObject();
+            stmt.free();
+            return row;
+          }
+          stmt.free();
+          return undefined;
+        } catch (e) {
+          console.error('DB get error:', e.message, sql, cleanParams);
+          return undefined;
+        }
       },
       all(...params) {
-        const result = db.exec(sql, params);
-        if (!result.length) return [];
-        const columns = result[0].columns;
-        return result[0].values.map(values => {
-          const row = {};
-          columns.forEach((col, i) => { row[col] = values[i]; });
-          return row;
+        const cleanParams = params.map(p => {
+          if (typeof p === 'string' && /^\d+$/.test(p)) return parseInt(p);
+          return p;
         });
+        try {
+          const results = [];
+          const stmt = db.prepare(sql);
+          stmt.bind(cleanParams);
+          while (stmt.step()) {
+            results.push(stmt.getAsObject());
+          }
+          stmt.free();
+          return results;
+        } catch (e) {
+          console.error('DB all error:', e.message, sql, cleanParams);
+          return [];
+        }
       },
       run(...params) {
-        db.run(sql, params);
-        saveDatabase();
-        return {
-          lastInsertRowid: db.exec("SELECT last_insert_rowid()")[0].values[0][0],
-          changes: db.getRowsModified()
-        };
+        const cleanParams = params.map(p => {
+          if (typeof p === 'string' && /^\d+$/.test(p)) return parseInt(p);
+          return p;
+        });
+        try {
+          db.run(sql, cleanParams);
+          saveDatabase();
+          const lastId = db.exec("SELECT last_insert_rowid()");
+          return {
+            lastInsertRowid: lastId.length ? lastId[0].values[0][0] : 0,
+            changes: db.getRowsModified()
+          };
+        } catch (e) {
+          console.error('DB run error:', e.message, sql, cleanParams);
+          saveDatabase();
+          return { lastInsertRowid: 0, changes: 0 };
+        }
       }
     };
   },
