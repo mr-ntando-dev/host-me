@@ -23,7 +23,7 @@ async function start() {
   const { isAuthenticated } = require('./middleware/auth');
 
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.SERVER_PORT || process.env.PORT || 25535;
 
   // Security
   app.use(helmet({ contentSecurityPolicy: false }));
