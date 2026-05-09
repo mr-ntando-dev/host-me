@@ -3,26 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Speceify - Node.js Deployment Panel</title>
+  <title>Speceify — Node.js Deployment Panel</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
   <nav class="navbar">
     <div class="nav-brand">
-      <a href="/dashboard">⚡ Speceify</a>
+      <a href="<%= user ? '/dashboard' : '/' %>">
+        <span class="brand-icon">⚡</span>
+        Speceify
+      </a>
     </div>
     <% if (user) { %>
     <div class="nav-links">
-      <a href="/dashboard">Dashboard</a>
-      <a href="/apps/create">+ New App</a>
+      <a href="/dashboard">🏠 <span>Dashboard</span></a>
+      <a href="/apps/create">＋ <span>New App</span></a>
       <% if (user.role === 'admin') { %>
-      <a href="/admin" class="admin-link">Admin</a>
+      <a href="/admin" class="admin-link">⚙️ <span>Admin</span></a>
       <% } %>
       <span class="nav-user"><%= user.username %></span>
-      <a href="/auth/logout" class="btn-logout">Logout</a>
+      <a href="/auth/logout" class="btn-logout">Sign out</a>
     </div>
     <% } %>
   </nav>
+  <div id="toast-container"></div>
   <main class="container">

@@ -2,22 +2,31 @@
 
 <div class="auth-container">
   <div class="auth-card">
-    <h2>Login</h2>
+    <div class="auth-logo">
+      <div class="logo-icon">⚡</div>
+      <h1>Speceify</h1>
+      <p>Sign in to your deployment panel</p>
+    </div>
+
     <% if (error) { %>
-    <div class="alert alert-error"><%= error %></div>
+    <div class="alert alert-error">⚠️ <%= error %></div>
     <% } %>
+
     <form method="POST" action="/auth/login">
       <div class="form-group">
         <label>Username or Email</label>
-        <input type="text" name="username" required autofocus>
+        <input type="text" name="username" placeholder="admin" required autofocus>
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" name="password" required>
+        <input type="password" name="password" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary btn-full">Login</button>
+      <button type="submit" class="btn btn-primary btn-full">Sign In →</button>
     </form>
-    <p class="auth-link">Don't have an account? <a href="/auth/register">Register</a></p>
+
+    <div class="auth-link">
+      Don't have an account? <a href="/auth/register">Create one</a>
+    </div>
   </div>
 </div>
 

@@ -1,176 +1,128 @@
 <%- include('../partials/header') %>
 
-<div class="admin-panel">
-  <h1>🛡️ Admin Panel</h1>
+<div class="page-header">
+  <h1>⚙️ Admin Panel</h1>
+  <p>Manage users, monitor all apps, and view server statistics.</p>
+</div>
 
-  <div class="stats-bar">
-    <div class="stat">
-      <span class="stat-value"><%= stats.totalUsers %></span>
-      <span class="stat-label">Users</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value"><%= stats.totalApps %></span>
-      <span class="stat-label">Total Apps</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value"><%= stats.runningApps %></span>
-      <span class="stat-label">Running</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value"><%= stats.stoppedApps %></span>
-      <span class="stat-label">Stopped</span>
-    </div>
+<!-- Stats -->
+<div class="stats-bar" style="margin-bottom:2rem;">
+  <div class="stat">
+    <span class="stat-value"><%= stats.totalUsers %></span>
+    <span class="stat-label">Users</span>
   </div>
-
-  <!-- AI Admin Assistant -->
-  <div class="section-card ai-section" style="margin-bottom: 2rem">
-    <div class="ai-section-header">
-      <h3>🤖 AI Admin Assistant</h3>
-      <span class="ai-badge">AI</span>
-    </div>
-    <p class="text-muted" style="margin-bottom:1rem">Ask anything about your server, users, apps, or get management recommendations. AI has full visibility into your server state.</p>
-
-    <div class="ai-quick-actions">
-      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Which apps or users are using the most resources? Should I be concerned?')">📊 Resource audit</button>
-      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Are there any apps in error or stopped state that need attention?')">🚨 App health check</button>
-      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('What are good default resource limits for new users on this server?')">⚙️ Capacity planning</button>
-      <button class="btn btn-sm btn-ai-outline" onclick="adminAiQuick('Summarize recent activity and flag anything unusual')">🔎 Activity summary</button>
-    </div>
-
-    <div id="admin-ai-messages" class="ai-chat-messages"></div>
-
-    <div class="ai-chat-input-row">
-      <input type="text" id="admin-ai-input" placeholder="Ask about your server, users, or apps..." onkeydown="if(event.key==='Enter') sendAdminAiMessage()">
-      <button class="btn btn-ai" onclick="sendAdminAiMessage()" id="admin-ai-btn">Ask AI</button>
-    </div>
+  <div class="stat">
+    <span class="stat-value"><%= stats.totalApps %></span>
+    <span class="stat-label">Total Apps</span>
   </div>
-
-  <!-- Users Table -->
-  <div class="section-card">
-    <h3>👥 Users</h3>
-    <table class="admin-table">
-      <thead>
-        <tr><th>Username</th><th>Email</th><th>Role</th><th>Apps</th><th>RAM Limit</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        <% users.forEach(u => { %>
-        <tr>
-          <td><strong><%= u.username %></strong></td>
-          <td><%= u.email %></td>
-          <td><span class="role-badge role-<%= u.role %>"><%= u.role %></span></td>
-          <td><%= u.max_apps %></td>
-          <td><%= u.max_ram_mb %>MB</td>
-          <td>
-            <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-secondary">Manage</a>
-            <% if (u.role !== 'admin') { %>
-            <button class="btn btn-sm btn-danger" onclick="deleteUser(<%= u.id %>)">Delete</button>
-            <% } %>
-          </td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
+  <div class="stat">
+    <span class="stat-value"><%= stats.runningApps %></span>
+    <span class="stat-label">Running</span>
   </div>
-
-  <!-- All Apps -->
-  <div class="section-card">
-    <h3>📦 All Apps</h3>
-    <table class="admin-table">
-      <thead>
-        <tr><th>Name</th><th>Owner</th><th>Status</th><th>Port</th><th>RAM</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        <% apps.forEach(app => { %>
-        <tr>
-          <td><strong><%= app.name %></strong></td>
-          <td><%= app.username %></td>
-          <td><span class="status-badge status-<%= app.status %>"><%= app.status %></span></td>
-          <td><%= app.port %></td>
-          <td><%= app.ram_limit_mb %>MB</td>
-          <td>
-            <% if (app.status === 'running') { %>
-            <button class="btn btn-sm btn-danger" onclick="adminForceStop(<%= app.id %>)">Force Stop</button>
-            <% } %>
-          </td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
+  <div class="stat">
+    <span class="stat-value"><%= stats.errorApps %></span>
+    <span class="stat-label">Errors</span>
   </div>
 </div>
 
+<!-- AI Admin Chat -->
+<div class="section-card ai-section" style="margin-bottom:2rem;">
+  <div class="ai-section-header">
+    <h3>🤖 Admin AI</h3>
+    <span class="ai-badge">AI</span>
+  </div>
+  <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Ask about server health, user limits, capacity planning, or any operational question.</p>
+  <div class="ai-quick-actions">
+    <button class="btn btn-sm btn-ai-outline" onclick="adminAiMsg('Summarize server health and flag any issues')">🏥 Health check</button>
+    <button class="btn btn-sm btn-ai-outline" onclick="adminAiMsg('Which users are closest to their resource limits?')">📊 Resource usage</button>
+    <button class="btn btn-sm btn-ai-outline" onclick="adminAiMsg('Are there any security concerns I should know about?')">🛡️ Security</button>
+  </div>
+  <div id="admin-ai-messages" class="ai-chat-messages"></div>
+  <div class="ai-chat-input-row">
+    <input type="text" id="admin-ai-input" placeholder="Ask the admin AI..." onkeydown="if(event.key==='Enter') adminAiSend()">
+    <button class="btn btn-ai" onclick="adminAiSend()" id="admin-ai-btn">Send</button>
+  </div>
+</div>
+
+<!-- Users Table -->
+<div class="section-card" style="margin-bottom:2rem;">
+  <h3 style="margin-bottom:1.25rem;">👥 Users</h3>
+  <table class="admin-table">
+    <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Apps</th><th>RAM</th><th>Storage</th><th>Joined</th><th>Actions</th></tr></thead>
+    <tbody>
+      <% users.forEach(u => { %>
+      <tr>
+        <td><strong><%= u.username %></strong></td>
+        <td class="text-muted"><%= u.email %></td>
+        <td><span class="role-badge role-<%= u.role %>"><%= u.role %></span></td>
+        <td><%= u.max_apps %></td>
+        <td><%= u.max_ram_mb %>MB</td>
+        <td><%= u.max_storage_mb %>MB</td>
+        <td class="text-muted" style="font-size:0.78rem;"><%= u.created_at ? u.created_at.slice(0,10) : '-' %></td>
+        <td><a href="/admin/user/<%= u.id %>" class="btn btn-sm btn-secondary">Edit</a></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Apps Table -->
+<div class="section-card">
+  <h3 style="margin-bottom:1.25rem;">📦 All Apps</h3>
+  <table class="admin-table">
+    <thead><tr><th>App</th><th>Owner</th><th>Status</th><th>Port</th><th>RAM</th><th>Repo</th></tr></thead>
+    <tbody>
+      <% apps.forEach(app => { %>
+      <tr>
+        <td><a href="/apps/<%= app.id %>"><strong><%= app.name %></strong></a></td>
+        <td class="text-muted"><%= app.username %></td>
+        <td><span class="status-badge status-<%= app.status %>"><%= app.status %></span></td>
+        <td><code><%= app.port %></code></td>
+        <td><%= app.ram_limit_mb %>MB</td>
+        <td class="text-muted text-truncate" style="font-size:0.8rem; max-width:200px;"><%= app.repo_url || '-' %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
 <script>
-let adminChatHistory = [];
+let adminAiHistory = [];
 
-function renderMarkdown(text) {
-  return text
-    .replace(/```[\s\S]*?```/g, m => '<pre style="background:#0d0d1a;padding:10px;border-radius:6px;overflow-x:auto;font-size:0.82rem"><code>' + escHtml(m.slice(3, m.lastIndexOf('```')).replace(/^[^\n]*\n/, '')) + '</code></pre>')
-    .replace(/`([^`]+)`/g, '<code style="background:#0d0d1a;padding:2px 5px;border-radius:4px">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/^### (.+)$/gm, '<strong style="font-size:1rem">$1</strong>')
-    .replace(/^## (.+)$/gm, '<strong style="font-size:1.1rem">$1</strong>')
-    .replace(/^- (.+)$/gm, '&bull; $1<br>')
-    .replace(/\n/g, '<br>');
+function renderMd(md) {
+  return md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```[\w]*\n?([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^#{1,3}\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\s*[-*]\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/\n/g,'<br>');
 }
 
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function adminAiMsg(msg) { document.getElementById('admin-ai-input').value = msg; adminAiSend(); }
 
-function addAdminMsg(role, content, isLoading) {
-  const container = document.getElementById('admin-ai-messages');
-  const div = document.createElement('div');
-  div.className = `ai-msg ai-msg-${role}`;
-  if (isLoading) {
-    div.id = 'admin-loading-msg';
-    div.innerHTML = '<span class="ai-typing">AI is thinking<span class="dots">...</span></span>';
-  } else {
-    div.innerHTML = role === 'assistant' ? renderMarkdown(content) : '<span>' + escHtml(content) + '</span>';
-  }
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-  return div;
-}
-
-async function sendAdminAiMessage() {
+async function adminAiSend() {
   const input = document.getElementById('admin-ai-input');
-  const btn = document.getElementById('admin-ai-btn');
-  const message = input.value.trim();
-  if (!message) return;
-
+  const msg = input.value.trim(); if (!msg) return;
   input.value = '';
-  btn.disabled = true;
-  addAdminMsg('user', message);
-  const loadingEl = addAdminMsg('assistant', '', true);
-
+  const box = document.getElementById('admin-ai-messages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'ai-msg ai-msg-user'; userDiv.textContent = msg; box.appendChild(userDiv);
+  adminAiHistory.push({ role:'user', content: msg });
+  const loading = document.createElement('div');
+  loading.className = 'ai-msg ai-msg-assistant ai-msg-loading';
+  loading.innerHTML = '<span></span><span></span><span></span>';
+  box.appendChild(loading); box.scrollTop = 99999;
+  const btn = document.getElementById('admin-ai-btn'); btn.disabled = true;
   try {
-    const res = await fetch('/ai/admin-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history: adminChatHistory })
-    });
-    const data = await res.json();
-    loadingEl.remove();
-
-    if (data.success) {
-      adminChatHistory.push({ role: 'user', content: message });
-      adminChatHistory.push({ role: 'assistant', content: data.reply });
-      if (adminChatHistory.length > 12) adminChatHistory = adminChatHistory.slice(-12);
-      addAdminMsg('assistant', data.reply);
-    } else {
-      addAdminMsg('assistant', 'Error: ' + (data.error || 'AI unavailable'));
-    }
-  } catch(e) {
-    loadingEl.remove();
-    addAdminMsg('assistant', 'Network error — try again.');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function adminAiQuick(msg) {
-  document.getElementById('admin-ai-input').value = msg;
-  sendAdminAiMessage();
+    const r = await fetch('/ai/admin-chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: msg, history: adminAiHistory.slice(-6) }) });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error);
+    loading.className = 'ai-msg ai-msg-assistant';
+    loading.innerHTML = renderMd(d.reply);
+    adminAiHistory.push({ role:'assistant', content: d.reply });
+  } catch(e) { loading.className='ai-msg ai-msg-assistant'; loading.textContent='Error: '+e.message; }
+  btn.disabled = false; box.scrollTop = 99999;
 }
 </script>
 

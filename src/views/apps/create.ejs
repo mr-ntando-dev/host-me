@@ -1,87 +1,70 @@
 <%- include('../partials/header') %>
 
 <div class="form-container">
-  <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem">
-    <h1 style="margin:0">Deploy New App</h1>
-    <span class="ai-badge">AI</span>
+  <div class="page-header">
+    <h1>Deploy New App</h1>
+    <p class="page-desc">Connect a Git repository and Speceify will clone, install dependencies, and start your app with PM2.</p>
   </div>
 
   <% if (error) { %>
-  <div class="alert alert-error"><%= error %></div>
+  <div class="alert alert-error">⚠️ <%= error %></div>
   <% } %>
 
-  <!-- AI Auto-Fill Banner -->
-  <div id="ai-prefill-banner" style="display:none" class="ai-result-card" style="margin-bottom:1.5rem">
-    <strong>✨ AI pre-filled this form</strong> — review and adjust before deploying.
-  </div>
+  <form method="POST" action="/apps/create" id="create-form">
 
-  <form method="POST" action="/apps/create" class="deploy-form">
-    <div class="form-group">
-      <label>App Name</label>
-      <input type="text" id="f-name" name="name" required placeholder="my-awesome-app" pattern="[a-z0-9-]+" minlength="2" maxlength="30">
-      <small>Lowercase letters, numbers, and hyphens only</small>
+    <div class="form-section">
+      <div class="form-section-title">Repository</div>
+      <div class="form-group">
+        <label>App Name</label>
+        <input type="text" name="name" id="app-name" placeholder="my-cool-app" required minlength="2" maxlength="30">
+        <small>Lowercase letters, numbers and hyphens only</small>
+      </div>
+      <div class="form-group">
+        <label>Git Repository URL</label>
+        <input type="url" name="repo_url" id="repo-url" placeholder="https://github.com/user/my-app.git" required>
+      </div>
+      <div class="form-group">
+        <label>Branch</label>
+        <input type="text" name="branch" id="branch" value="main" placeholder="main">
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>Git Repository URL</label>
-      <input type="url" id="f-repo" name="repo_url" required placeholder="https://github.com/user/repo.git">
-      <small>HTTPS URL. For private repos, make sure your Git token is set in dashboard settings.</small>
+    <div class="form-section">
+      <div class="form-section-title">Runtime Config</div>
+      <div class="form-group">
+        <label>Entry File</label>
+        <input type="text" name="entry_file" id="entry-file" value="index.js" placeholder="index.js or src/index.js">
+        <small>The main file Node.js should run (check scripts.start in package.json)</small>
+      </div>
+      <div class="form-group">
+        <label>RAM Limit (MB)</label>
+        <input type="number" name="ram_limit" id="ram-limit" value="256" min="64" max="2048">
+        <small>App restarts if it exceeds this limit. Simple APIs: 128MB, Express: 256MB, heavy: 512MB+</small>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>Branch</label>
-      <input type="text" id="f-branch" name="branch" value="main" placeholder="main">
+    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">🚀 Deploy App</button>
+      <a href="/dashboard" class="btn btn-secondary">Cancel</a>
     </div>
-
-    <div class="form-group">
-      <label>Entry File</label>
-      <input type="text" id="f-entry" name="entry_file" value="index.js" placeholder="index.js">
-      <small>Main file to run (e.g. index.js, server.js, app.js)</small>
-    </div>
-
-    <div class="form-group">
-      <label>RAM Limit (MB)</label>
-      <input type="number" id="f-ram" name="ram_limit" value="256" min="64" max="1024">
-      <small>Maximum memory your app can use before auto-restart</small>
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-full">🚀 Create &amp; Deploy App</button>
   </form>
 </div>
 
 <script>
-// Pre-fill form from AI query params (from dashboard AI Quick Deploy)
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const fields = { name: 'f-name', repo_url: 'f-repo', branch: 'f-branch', entry_file: 'f-entry', ram_limit: 'f-ram' };
-  let hasAiData = false;
-
-  Object.entries(fields).forEach(([key, id]) => {
-    const val = params.get(key);
-    if (val) {
-      document.getElementById(id).value = val;
-      hasAiData = true;
-    }
-  });
-
-  if (hasAiData) {
-    document.getElementById('ai-prefill-banner').style.display = 'block';
-  }
-
-  // Also pre-set env vars if passed (store in hidden field for future use)
-  const envVars = params.get('env_vars');
-  if (envVars) {
-    try {
-      const parsed = JSON.parse(envVars);
-      // store for server-side if needed
-      const inp = document.createElement('input');
-      inp.type = 'hidden';
-      inp.name = 'ai_env_vars';
-      inp.value = envVars;
-      document.querySelector('form').appendChild(inp);
-    } catch(e) {}
-  }
-})();
+// Pre-fill from AI detection if available
+const aiConfig = sessionStorage.getItem('aiConfig');
+const aiRepoUrl = sessionStorage.getItem('aiRepoUrl');
+if (aiConfig) {
+  const c = JSON.parse(aiConfig);
+  if (document.getElementById('app-name')) document.getElementById('app-name').value = c.name || '';
+  if (document.getElementById('entry-file')) document.getElementById('entry-file').value = c.entry_file || 'index.js';
+  if (document.getElementById('branch')) document.getElementById('branch').value = c.branch || 'main';
+  if (document.getElementById('ram-limit')) document.getElementById('ram-limit').value = c.ram_limit || 256;
+  if (aiRepoUrl && document.getElementById('repo-url')) document.getElementById('repo-url').value = aiRepoUrl;
+  sessionStorage.removeItem('aiConfig');
+  sessionStorage.removeItem('aiRepoUrl');
+  showToast('AI config pre-filled!', 'success');
+}
 </script>
 
 <%- include('../partials/footer') %>
