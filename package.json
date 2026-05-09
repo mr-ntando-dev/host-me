@@ -2,10 +2,10 @@
   "name": "speceify",
   "version": "1.0.0",
   "description": "Lightweight Node.js app deployment panel - speceify.eu",
-  "main": "src/index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
     "setup": "node src/setup.js"
   },
   "dependencies": {
